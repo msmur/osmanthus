@@ -82,7 +82,12 @@ jobs:
             |---|---|
             | macOS Apple Silicon | `*_arm64.dmg` |
 
-            > **First launch:** The app is unsigned. Right-click → **Open** to bypass Gatekeeper.
+            > **First launch:** The app is unsigned. macOS will block it with a "damaged" error.
+            > Run this in Terminal after moving the app to Applications:
+            > ```
+            > xattr -cr /Applications/Osmanthus.app
+            > ```
+            > Then open it normally.
 
             See [SETUP.md](https://github.com/${{ github.repository }}/blob/main/SETUP.md) to build from source.
           draft: false

@@ -40,9 +40,14 @@ Osmanthus also uses the **Optimal Recognition Point (ORP)**: the letter ~30% int
 
 Grab the latest `.dmg` from [**Releases**](https://github.com/msmur/osmanthus/releases/latest).
 
-> **macOS note:** Osmanthus is unsigned. On first launch, right-click the app → **Open** to bypass Gatekeeper.
+> **macOS note:** Osmanthus is unsigned. macOS will block it with a "damaged" error.
+> Move the app to Applications, then run this in Terminal:
+> ```
+> xattr -cr /Applications/Osmanthus.app
+> ```
+> Then open it normally.
 >
-> Apple Silicon only (M1/M2/etc). Intel Macs can build from source.
+> Apple Silicon only (M1/M2/M3/M4). Intel Macs can build from source.
 
 ---
 
