@@ -44,14 +44,14 @@ Progress (word position) is auto-saved every 25 words and on exit.
 
 ## Tech stack
 
-| Layer | Technology | Why |
-|---|---|---|
-| Desktop shell | Tauri v2 (Rust) | Native OS window, no Electron, tiny binary |
-| Frontend | React 18 + TypeScript | Component model; strict TS catches bugs |
-| Bundler | Vite | Fast HMR, ESM-first |
-| Epub parsing | JSZip (JS) | Epub is a ZIP; no native dep needed |
-| Persistence | @tauri-apps/plugin-store | JSON file in OS app data dir |
-| Package manager | pnpm | Faster installs, strict dep graph |
+| Layer           | Technology               | Why                                        |
+|-----------------|--------------------------|--------------------------------------------|
+| Desktop shell   | Tauri v2 (Rust)          | Native OS window, no Electron, tiny binary |
+| Frontend        | React 18 + TypeScript    | Component model; strict TS catches bugs    |
+| Bundler         | Vite                     | Fast HMR, ESM-first                        |
+| Epub parsing    | JSZip (JS)               | Epub is a ZIP; no native dep needed        |
+| Persistence     | @tauri-apps/plugin-store | JSON file in OS app data dir               |
+| Package manager | pnpm                     | Faster installs, strict dep graph          |
 
 ---
 
