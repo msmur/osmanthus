@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── Build macOS binaries in parallel ──────────────────────────────────────
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            runner: macos-14        # M1 runner — builds native ARM binary
+          - target: x86_64-apple-darwin
+            runner: macos-13        # Intel runner — builds native x86 binary
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build Tauri app
+        run: pnpm tauri build --target ${{ matrix.target }}
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.target }}
+          # Tauri bundles the .dmg into this path
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          if-no-files-found: error
+
+  # ── Create GitHub Release and attach both DMGs ────────────────────────────
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download ARM artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dmg-aarch64-apple-darwin
+          path: artifacts/arm
+
+      - name: Download Intel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dmg-x86_64-apple-darwin
+          path: artifacts/intel
+
+      - name: Rename DMGs to include architecture
+        run: |
+          for f in artifacts/arm/*.dmg; do
+            mv "$f" "${f%.dmg}_arm64.dmg"
+          done
+          for f in artifacts/intel/*.dmg; do
+            mv "$f" "${f%.dmg}_x86_64.dmg"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Osmanthus ${{ github.ref_name }}
+          body: |
+            ## Osmanthus ${{ github.ref_name }}
+
+            ### Download
+            | Platform | File |
+            |---|---|
+            | macOS Apple Silicon (M1/M2/M3) | `*_arm64.dmg` |
+            | macOS Intel | `*_x86_64.dmg` |
+
+            > **First launch:** The app is unsigned. Right-click → **Open** to bypass Gatekeeper.
+
+            See [SETUP.md](https://github.com/${{ github.repository }}/blob/main/SETUP.md) to build from source.
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: |
+            artifacts/arm/*.dmg
+            artifacts/intel/*.dmg
