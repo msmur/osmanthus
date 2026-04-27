@@ -22,7 +22,7 @@ Osmanthus also uses the **Optimal Recognition Point (ORP)**: the letter ~30% int
 - **ORP highlighting** — the recognition-point letter is coloured red and horizontally locked
 - **Adjustable WPM** — 60–1500 words per minute; fine-tune with keyboard shortcuts
 - **Epub import** — drag & drop or file picker; covers, titles, and authors extracted automatically
-- **Table of contents** — full chapter navigation with keyboard support (↑ ↓ Enter)
+- **Table of contents** — browse and jump to any chapter by header; navigate with ↑ ↓ Enter (H)
 - **Paragraph context** — see the current and previous paragraphs at any time (P)
 - **Zen mode** — hide all chrome for distraction-free reading (Z)
 - **Fullscreen** — native macOS fullscreen (F)
@@ -30,7 +30,7 @@ Osmanthus also uses the **Optimal Recognition Point (ORP)**: the letter ~30% int
 - **Undo history** — step back through scrubber drags, TOC jumps, and word skips (⌘Z)
 - **Command palette** — search and open any book instantly from anywhere (⌘K)
 - **Ramp-up mode** — gradually accelerates from 50% to full WPM over 5 seconds on play (above 500 WPM)
-- **Reading timer** — set a countdown in seconds; ticks down in real time, pauses automatically when it expires (E)
+- **Reading timer** — set a countdown in seconds; ticks down in real time, pauses automatically when it expires (T)
 - **Auto-save** — progress is saved every 25 words and on exit
 - **Dark / light mode** — follows your system preference; toggle manually with D
 
