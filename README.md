@@ -20,16 +20,17 @@ Osmanthus also uses the **Optimal Recognition Point (ORP)**: the letter ~30% int
 ## Features
 
 - **ORP highlighting** — the recognition-point letter is coloured red and horizontally locked
-- **Adjustable WPM** — 60–900 words per minute; fine-tune with keyboard shortcuts
+- **Adjustable WPM** — 60–1500 words per minute; fine-tune with keyboard shortcuts
 - **Epub import** — drag & drop or file picker; covers, titles, and authors extracted automatically
 - **Table of contents** — full chapter navigation with keyboard support (↑ ↓ Enter)
 - **Paragraph context** — see the current and previous paragraphs at any time (P)
 - **Zen mode** — hide all chrome for distraction-free reading (Z)
 - **Fullscreen** — native macOS fullscreen (F)
-- **Font scaling** — resize the word display from 0.5× to 2.5× ([ ])
+- **Font scaling** — resize the word display from 0.5× to 3× ([ ])
 - **Undo history** — step back through scrubber drags, TOC jumps, and word skips (⌘Z)
 - **Command palette** — search and open any book instantly from anywhere (⌘K)
 - **Ramp-up mode** — gradually accelerates from 50% to full WPM over 5 seconds on play (above 500 WPM)
+- **Reading timer** — set a countdown in seconds; ticks down in real time, pauses automatically when it expires (E)
 - **Auto-save** — progress is saved every 25 words and on exit
 - **Dark / light mode** — follows your system preference; toggle manually with D
 
@@ -74,14 +75,15 @@ Grab the latest `.dmg` from [**Releases**](https://github.com/msmur/osmanthus/re
 | `X`       | Toggle player controls                    |
 | `[ ]`     | Font size −/+                             |
 | `P`       | Paragraph view                            |
-| `T`       | Table of contents (↑ ↓ Enter to navigate) |
+| `H`       | Headers / table of contents (↑ ↓ Enter)   |
 | `Z`       | Zen mode                                  |
 | `F`       | Toggle fullscreen                         |
 | `G`       | Go to word #                              |
 | `W`       | Set WPM                                   |
 | `S`       | Set font size                             |
 | `R`       | Toggle ramp-up (WPM > 500 only)           |
-| `H`       | Toggle undo history                       |
+| `T`       | Set reading timer                         |
+| `U`       | Toggle undo history                       |
 | `⌘Z`      | Undo word index change                    |
 | `⌘K`      | Search books                              |
 | `D`       | Toggle dark / light mode                  |

@@ -74,9 +74,20 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
   const [showHeader, setShowHeader] = useState(true)
   const [tocFocusIdx, setTocFocusIdx] = useState(0)
   const [rampUp, setRampUp] = useState(false)
+  const [timerSecs, setTimerSecs] = useState<number | null>(null)
+  const [timerInputValue, setTimerInputValue] = useState('')
+  const [timerRemaining, setTimerRemaining] = useState<number | null>(null)
+  const [showJumpPrompt, setShowJumpPrompt] = useState(false)
+  const [showTimerPrompt, setShowTimerPrompt] = useState(false)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const timerInputRef = useRef<HTMLInputElement>(null)
+  const showJumpPromptRef = useRef(false)
+  const showTimerPromptRef = useRef(false)
+  const wasPlayingBeforePromptRef = useRef(false)
   const idxRef = useRef(idx)
   const playingRef = useRef(playing)
   const wpmRef = useRef(wpm)
@@ -127,6 +138,8 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
   tocRef.current = toc
   tocFocusIdxRef.current = tocFocusIdx
   rampUpRef.current = rampUp
+  showJumpPromptRef.current = showJumpPrompt
+  showTimerPromptRef.current = showTimerPrompt
 
   // ── Load/save WPM ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -154,6 +167,8 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
 
   useEffect(() => { setWpmInputValue(String(wpm)) }, [wpm])
   useEffect(() => { setFontSizeInputValue(fontSize.toFixed(1)) }, [fontSize])
+  useEffect(() => { if (showJumpPrompt) setTimeout(() => jumpInputRef.current?.focus(), 0) }, [showJumpPrompt])
+  useEffect(() => { if (showTimerPrompt) setTimeout(() => timerInputRef.current?.focus(), 0) }, [showTimerPrompt])
 
   // ── Load words + TOC ───────────────────────────────────────────────────────
   useEffect(() => {
@@ -278,13 +293,33 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
   useEffect(() => {
     if (playing && words.length > 0) {
       rampStartRef.current = Date.now()
+      if (timerSecs !== null) {
+        const endTime = Date.now() + timerSecs * 1000
+        setTimerRemaining(timerSecs)
+        countdownRef.current = setTimeout(() => {
+          countdownRef.current = null
+          if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
+          setTimerRemaining(timerSecs)
+          setPlaying(false)
+        }, timerSecs * 1000)
+        tickIntervalRef.current = setInterval(() => {
+          setTimerRemaining(Math.max(0, Math.ceil((endTime - Date.now()) / 1000)))
+        }, 500)
+      }
       scheduleNext()
     } else {
       rampStartRef.current = null
       if (timerRef.current) clearTimeout(timerRef.current)
+      if (countdownRef.current) { clearTimeout(countdownRef.current); countdownRef.current = null }
+      if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
+      if (timerSecs !== null) setTimerRemaining(timerSecs)
     }
-    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
-  }, [playing, words.length, scheduleNext])
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (countdownRef.current) { clearTimeout(countdownRef.current); countdownRef.current = null }
+      if (tickIntervalRef.current) { clearInterval(tickIntervalRef.current); tickIntervalRef.current = null }
+    }
+  }, [playing, words.length, scheduleNext, timerSecs])
 
   // Save progress on unmount
   useEffect(() => {
@@ -332,19 +367,61 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       setPosHistory((h) => [...h.slice(-19), prev])
     }
     setJumpInput('')
-    jumpInputRef.current?.blur()
+  }
+
+  function openJumpPrompt() {
+    wasPlayingBeforePromptRef.current = playingRef.current
+    setPlaying(false)
+    setShowTimerPrompt(false)
+    setShowJumpPrompt(true)
+  }
+
+  function closeJumpPrompt() {
+    setShowJumpPrompt(false)
+    if (wasPlayingBeforePromptRef.current) { wasPlayingBeforePromptRef.current = false; setPlaying(true) }
+  }
+
+  function openTimerPrompt() {
+    wasPlayingBeforePromptRef.current = playingRef.current
+    setPlaying(false)
+    setShowJumpPrompt(false)
+    setShowTimerPrompt(true)
+  }
+
+  function closeTimerPrompt() {
+    setShowTimerPrompt(false)
+    if (wasPlayingBeforePromptRef.current) { wasPlayingBeforePromptRef.current = false; setPlaying(true) }
   }
 
   function commitWpm() {
     const v = parseInt(wpmInputValue, 10)
-    const clamped = isNaN(v) ? wpm : Math.max(60, Math.min(900, v))
+    const clamped = isNaN(v) ? wpm : Math.max(60, Math.min(1500, v))
     setWpm(clamped)
     setWpmInputValue(String(clamped))
   }
 
+  function commitTimer() {
+    const v = parseInt(timerInputValue, 10)
+    if (isNaN(v) || v <= 0) {
+      setTimerSecs(null)
+      setTimerRemaining(null)
+      setTimerInputValue('')
+    } else {
+      setTimerSecs(v)
+      setTimerRemaining(v)
+      setTimerInputValue(String(v))
+    }
+  }
+
+  function formatCountdown(secs: number): string {
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return m > 0 ? `${m}:${String(s).padStart(2, '0')}` : `${s}s`
+  }
+
   function commitFontSize() {
     const v = parseFloat(fontSizeInputValue)
-    const clamped = isNaN(v) ? fontSize : Math.max(0.5, Math.min(2.5, v))
+    const clamped = isNaN(v) ? fontSize : Math.max(0.5, Math.min(3.0, v))
     const rounded = Math.round(clamped * 10) / 10
     setFontSize(rounded)
     setFontSizeInputValue(rounded.toFixed(1))
@@ -402,6 +479,10 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
         }
         return
       }
+      if (e.code === 'KeyG' && showJumpPromptRef.current) { e.preventDefault(); closeJumpPrompt(); return }
+      if (e.code === 'KeyT' && showTimerPromptRef.current) { e.preventDefault(); closeTimerPrompt(); return }
+      if (e.code === 'KeyW' && document.activeElement === wpmInputRef.current) { e.preventDefault(); commitWpm(); wpmInputRef.current?.blur(); return }
+      if (e.code === 'KeyS' && document.activeElement === fontInputRef.current) { e.preventDefault(); commitFontSize(); fontInputRef.current?.blur(); return }
       if (e.target instanceof HTMLInputElement) return
       if (e.key === '/') { setShowHelp(true); return }
       // TOC keyboard navigation
@@ -435,7 +516,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       if (e.code === 'ArrowLeft' && !e.shiftKey) {
         const p = idxRef.current; seek(-10); setPosHistory(h => [...h.slice(-19), p]); flash('back')
       }
-      if (e.code === 'ArrowUp' && !e.ctrlKey && !e.metaKey) { setWpm((w) => Math.min(900, w + 20)); flash('wpm-plus') }
+      if (e.code === 'ArrowUp' && !e.ctrlKey && !e.metaKey) { setWpm((w) => Math.min(1500, w + 20)); flash('wpm-plus') }
       if (e.code === 'ArrowDown' && !e.ctrlKey && !e.metaKey) { setWpm((w) => Math.max(60, w - 20)); flash('wpm-minus') }
       if (e.code === 'ArrowRight' && e.shiftKey && e.metaKey) {
         e.preventDefault()
@@ -454,6 +535,8 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
         navigate(target)
       }
       if (e.code === 'Escape') {
+        if (showJumpPromptRef.current) { closeJumpPrompt(); return }
+        if (showTimerPromptRef.current) { closeTimerPrompt(); return }
         if (isFullscreenRef.current) {
           isFullscreenRef.current = false
           if ('__TAURI_INTERNALS__' in window) {
@@ -465,7 +548,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
         }
       }
       if (e.code === 'KeyL' && !e.metaKey && !e.ctrlKey) { setPlaying(false); onBackRef.current() }
-      if (e.code === 'KeyT') setShowToc((s) => !s)
+      if (e.code === 'KeyH') setShowToc((s) => !s)
       if (e.code === 'KeyZ' && !e.metaKey && !e.ctrlKey) {
         if (zenModeRef.current) {
           exitZenMode()
@@ -478,7 +561,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       if (e.code === 'KeyC') setShowContext((s) => !s)
       if (e.code === 'KeyX') setShowControls((s) => !s)
       if (e.code === 'BracketLeft')  setFontSize((f) => Math.max(0.5, Math.round((f - 0.1) * 10) / 10))
-      if (e.code === 'BracketRight') setFontSize((f) => Math.min(2.5, Math.round((f + 0.1) * 10) / 10))
+      if (e.code === 'BracketRight') setFontSize((f) => Math.min(3.0, Math.round((f + 0.1) * 10) / 10))
       if (e.code === 'KeyP') {
         if (showParagraphPopupRef.current) {
           setShowParagraphPopup(false)
@@ -489,11 +572,12 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           setShowParagraphPopup(true)
         }
       }
-      if (e.code === 'KeyG') { e.preventDefault(); jumpInputRef.current?.select(); jumpInputRef.current?.focus() }
+      if (e.code === 'KeyG') { e.preventDefault(); openJumpPrompt() }
       if (e.code === 'KeyW') { e.preventDefault(); wpmInputRef.current?.select(); wpmInputRef.current?.focus() }
       if (e.code === 'KeyS') { e.preventDefault(); fontInputRef.current?.select(); fontInputRef.current?.focus() }
-      if (e.code === 'KeyH') setShowTimeline((s) => !s)
+      if (e.code === 'KeyU') setShowTimeline((s) => !s)
       if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) { setRampUp((s) => !s); flash('ramp') }
+      if (e.code === 'KeyT') { e.preventDefault(); openTimerPrompt() }
       if ((e.metaKey || e.ctrlKey) && e.code === 'KeyZ') { e.preventDefault(); handleUndo(); setShowTimeline(false); flash('undo') }
     }
     window.addEventListener('keydown', onKey)
@@ -579,6 +663,12 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
             <span className="reader-chapter">{toc[currentChapterIdx].title}</span>
           )}
         </div>
+        <div className="reader-nav-stats">
+          <span className="reader-nav-pos">{idx.toLocaleString()}<span className="reader-nav-total"> / {words.length.toLocaleString()}</span></span>
+          {timerSecs !== null && timerRemaining !== null && (
+            <span className={`reader-nav-timer${playing ? ' reader-nav-timer-active' : ''}`}>⏱ {formatCountdown(timerRemaining)}</span>
+          )}
+        </div>
         <div className="reader-wpm-control">
           <button
             className={flashedKey === 'wpm-minus' ? 'btn-flash' : ''}
@@ -598,7 +688,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           <span>wpm</span>
           <button
             className={flashedKey === 'wpm-plus' ? 'btn-flash' : ''}
-            onClick={() => { setWpm((w) => Math.min(900, w + 20)); flash('wpm-plus') }}
+            onClick={() => { setWpm((w) => Math.min(1500, w + 20)); flash('wpm-plus') }}
             title="Speed +20 wpm (↑)"
           >+</button>
         </div>
@@ -620,7 +710,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           />
           <span>×</span>
           <button
-            onClick={() => setFontSize((f) => Math.min(2.5, Math.round((f + 0.1) * 10) / 10))}
+            onClick={() => setFontSize((f) => Math.min(3.0, Math.round((f + 0.1) * 10) / 10))}
             title="Font size + (])"
           >+</button>
         </div>
@@ -629,7 +719,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       <div className="reader-body">
         {showToc && toc.length > 0 && (
           <aside className="toc-sidebar">
-            <div className="toc-sidebar-heading">Contents</div>
+            <div className="toc-sidebar-heading">Headers</div>
             <div className="toc-list" ref={tocListRef}>
               {toc.map((entry, i) => (
                 <button
@@ -721,24 +811,6 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           </span>
         </div>
 
-        <div className="jump-row">
-          <span className="jump-row-label">
-            Word {idx.toLocaleString()} of {words.length.toLocaleString()}
-          </span>
-          <input
-            ref={jumpInputRef}
-            type="number"
-            className="jump-input"
-            value={jumpInput}
-            onChange={(e) => setJumpInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleJump() }}
-            placeholder={String(idx)}
-            min={0}
-            max={words.length - 1}
-          />
-          <button className="jump-btn" onClick={handleJump} title="Jump to word (G → Enter)">Go</button>
-        </div>
-
         <div className="playback-row">
           <button
             className={`ctrl-btn${flashedKey === 'rew' ? ' btn-flash' : ''}`}
@@ -771,14 +843,16 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
 
         <div className="footer-btns">
           <button className={`btn-icon${rampUp ? ' btn-icon-active' : ''}`} onClick={() => setRampUp(s => !s)} title="Ramp up WPM on play (R) — active above 500 WPM">⇡</button>
+          <button className={`btn-icon${showJumpPrompt ? ' btn-icon-active' : ''}`} onClick={() => showJumpPrompt ? closeJumpPrompt() : openJumpPrompt()} title="Go to word (G)">#</button>
+          <button className={`btn-icon${showTimerPrompt || timerSecs !== null ? ' btn-icon-active' : ''}`} onClick={() => showTimerPrompt ? closeTimerPrompt() : openTimerPrompt()} title="Reading timer (T)">⏱</button>
           <button className={`btn-icon${showParagraphPopup ? ' btn-icon-active' : ''}`} onClick={toggleParagraphPopup} title="Paragraph view (P)">¶</button>
           <button className={`btn-icon${showHeader ? ' btn-icon-active' : ''}`} onClick={() => setShowHeader(s => !s)} title="Toggle navbar (N)">⊤</button>
           <button className={`btn-icon${showControls ? ' btn-icon-active' : ''}`} onClick={() => setShowControls(s => !s)} title="Toggle controls (X)">⊥</button>
           <button className="btn-icon" onClick={() => setShowHelp(true)} title="Keyboard shortcuts (/)">?</button>
           <button className="btn-icon" onClick={onToggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (D)`}>{theme === 'dark' ? '☀' : '☾'}</button>
           <button className="btn-icon" onClick={onShowAbout} title="About (I)">ℹ</button>
-          <button className={`btn-icon${showToc ? ' btn-icon-active' : ''}`} onClick={() => setShowToc(s => !s)} title="Table of contents (T)">☰</button>
-          <button className={`btn-icon${showTimeline ? ' btn-icon-active' : ''}`} onClick={() => setShowTimeline(s => !s)} title="Undo history (H)">⊙</button>
+          <button className={`btn-icon${showToc ? ' btn-icon-active' : ''}`} onClick={() => setShowToc(s => !s)} title="Headers (H)">☰</button>
+          <button className={`btn-icon${showTimeline ? ' btn-icon-active' : ''}`} onClick={() => setShowTimeline(s => !s)} title="Undo history (U)">⊙</button>
           <button className="btn-icon" onClick={() => { handleUndo(); flash('undo') }} title="Undo (⌘Z)">↩</button>
         </div>
       </footer>
@@ -788,7 +862,6 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           <div className="para-card" onClick={(e) => e.stopPropagation()}>
             <div className="para-card-header">
               <span className="para-card-title">Paragraph context</span>
-              <button className="help-close" onClick={closeParagraphPopup}>×</button>
             </div>
             {paragraphContext.prev2 && <p className="para-text para-text-prev">{paragraphContext.prev2}</p>}
             {paragraphContext.prev1 && <p className="para-text para-text-prev">{paragraphContext.prev1}</p>}
@@ -797,6 +870,70 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
                 <span key={i} className={i === paragraphContext.currentHighlight ? 'para-word-current' : ''}>{w}{' '}</span>
               ))}
             </p>
+          </div>
+        </div>
+      )}
+
+      {showJumpPrompt && (
+        <div className="prompt-overlay" onClick={closeJumpPrompt}>
+          <div className="prompt-card" onClick={(e) => e.stopPropagation()}>
+            <div className="prompt-header">
+              <span className="prompt-title">Go to word</span>
+            </div>
+            <p className="prompt-meta">Word {idx.toLocaleString()} of {words.length.toLocaleString()}</p>
+            <div className="prompt-row">
+              <input
+                ref={jumpInputRef}
+                type="number"
+                className="prompt-input"
+                value={jumpInput}
+                onChange={(e) => setJumpInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault()
+                  if (e.key === 'Enter') { handleJump(); closeJumpPrompt() }
+                  if (e.key === 'Escape') closeJumpPrompt()
+                }}
+                placeholder={String(idx)}
+                min={0}
+                max={words.length - 1}
+              />
+              <button className="prompt-btn" onClick={() => { handleJump(); closeJumpPrompt() }}>Go</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTimerPrompt && (
+        <div className="prompt-overlay" onClick={closeTimerPrompt}>
+          <div className="prompt-card" onClick={(e) => e.stopPropagation()}>
+            <div className="prompt-header">
+              <span className="prompt-title">Reading timer</span>
+            </div>
+            {timerSecs !== null && timerRemaining !== null && (
+              <p className={`prompt-meta${playing ? ' prompt-meta-active' : ''}`}>
+                {formatCountdown(timerRemaining)} remaining
+              </p>
+            )}
+            <div className="prompt-row">
+              <input
+                ref={timerInputRef}
+                type="number"
+                className="prompt-input"
+                value={timerInputValue}
+                onChange={(e) => setTimerInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key.length === 1 && !/[0-9]/.test(e.key)) e.preventDefault()
+                  if (e.key === 'Enter') { commitTimer(); closeTimerPrompt() }
+                  if (e.key === 'Escape') closeTimerPrompt()
+                }}
+                placeholder=""
+                min={1}
+                step={1}
+              />
+              <span className="prompt-unit">s</span>
+              <button className="prompt-btn" onClick={() => { commitTimer(); closeTimerPrompt() }}>Set</button>
+              <button className="prompt-btn prompt-btn-ghost" onClick={() => { setTimerSecs(null); setTimerRemaining(null); setTimerInputValue(''); closeTimerPrompt() }}>Clear</button>
+            </div>
           </div>
         </div>
       )}
@@ -817,7 +954,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
               <span className="help-key">X</span>            <span className="help-desc">Toggle player controls</span>
               <span className="help-key">[ ]</span>          <span className="help-desc">Font size ±</span>
               <span className="help-key">P</span>            <span className="help-desc">Paragraph view</span>
-              <span className="help-key">T</span>            <span className="help-desc">Table of contents (↑↓ Enter)</span>
+              <span className="help-key">H</span>            <span className="help-desc">Headers / table of contents (↑↓ Enter)</span>
               <span className="help-key">Z</span>            <span className="help-desc">Zen mode</span>
               <span className="help-key">F</span>            <span className="help-desc">Toggle fullscreen</span>
               <span className="help-key">⌘K</span>          <span className="help-desc">Open book search</span>
@@ -825,7 +962,8 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
               <span className="help-key">W</span>            <span className="help-desc">Set WPM</span>
               <span className="help-key">S</span>            <span className="help-desc">Set font size</span>
               <span className="help-key">R</span>            <span className="help-desc">Toggle ramp-up (WPM &gt; 500 only)</span>
-              <span className="help-key">H</span>            <span className="help-desc">Toggle undo history</span>
+              <span className="help-key">T</span>            <span className="help-desc">Set reading timer</span>
+              <span className="help-key">U</span>            <span className="help-desc">Toggle undo history</span>
               <span className="help-key">⌘Z</span>          <span className="help-desc">Undo word index change</span>
               <span className="help-key">D</span>            <span className="help-desc">Toggle dark / light mode</span>
               <span className="help-key">L</span>            <span className="help-desc">Go to library</span>

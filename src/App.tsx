@@ -11,7 +11,7 @@ export default function App() {
   const [paletteQuery, setPaletteQuery] = useState('')
   const [paletteSelected, setPaletteSelected] = useState(0)
   const [showAbout, setShowAbout] = useState(false)
-  const [appVersion, setAppVersion] = useState('0.1.0')
+  const [appVersion, setAppVersion] = useState('')
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     const saved = localStorage.getItem('osmanthus:theme')
     if (saved === 'light' || saved === 'dark') return saved
@@ -234,7 +234,7 @@ export default function App() {
             <button className="about-close" onClick={() => setShowAbout(false)}>×</button>
             <div className="about-header">
               <span className="about-app-name">Osmanthus</span>
-              <span className="about-version">v{appVersion}</span>
+              {appVersion && <span className="about-version">v{appVersion}</span>}
             </div>
             <p className="about-tagline">RSVP speed-reader for epub files</p>
             <div className="about-author">
