@@ -3,7 +3,7 @@
  *
  * Uses @tauri-apps/plugin-store which writes a JSON file to the OS app data
  * directory. Falls back to localStorage when running outside Tauri (e.g.
- * during `npm run dev` in the browser for UI development).
+ * during `pnpm run dev` in the browser for UI development).
  */
 
 import type { Book, Settings, TocEntry } from '../types'

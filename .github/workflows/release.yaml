@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
@@ -34,13 +34,12 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: 20
-          cache: pnpm
+          node-version: 24
 
       - name: Install frontend dependencies
         run: pnpm install
@@ -99,7 +98,7 @@ jobs:
             ### Download
             | Platform | File |
             |---|---|
-            | macOS Apple Silicon (M1/M2/M3) | `*_arm64.dmg` |
+            | macOS Apple Silicon (M1 Series) | `*_arm64.dmg` |
             | macOS Intel | `*_x86_64.dmg` |
 
             > **First launch:** The app is unsigned. Right-click → **Open** to bypass Gatekeeper.
