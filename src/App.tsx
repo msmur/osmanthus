@@ -12,6 +12,11 @@ export default function App() {
   const [paletteSelected, setPaletteSelected] = useState(0)
   const [showAbout, setShowAbout] = useState(false)
   const [appVersion, setAppVersion] = useState('0.1.0')
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('osmanthus:theme')
+    if (saved === 'light' || saved === 'dark') return saved
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
   const paletteInputRef = useRef<HTMLInputElement>(null)
   const paletteResultsRef = useRef<HTMLDivElement>(null)
   const booksRef = useRef(books)
@@ -19,6 +24,15 @@ export default function App() {
 
   useEffect(() => {
     getBooks().then(setBooks)
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('osmanthus:theme', theme)
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => t === 'dark' ? 'light' : 'dark')
   }, [])
 
   useEffect(() => {
@@ -84,6 +98,9 @@ export default function App() {
           })
         }
       }
+      if (e.code === 'KeyD' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+        toggleTheme()
+      }
       if (e.code === 'KeyI' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
         setShowAbout(s => !s)
       }
@@ -93,7 +110,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [toggleTheme])
 
   // Focus the search input when palette opens
   useEffect(() => {
@@ -144,6 +161,8 @@ export default function App() {
         onProgressUpdate={handleProgressUpdate}
         onComplete={handleComplete}
         onShowAbout={() => setShowAbout(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     )
   } else {
@@ -153,6 +172,8 @@ export default function App() {
         onBooksChange={setBooks}
         onOpenBook={handleOpenBook}
         onShowAbout={() => setShowAbout(true)}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
     )
   }

@@ -8,6 +8,8 @@ interface Props {
   onBooksChange: (books: Book[]) => void
   onOpenBook: (book: Book) => void
   onShowAbout: () => void
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
 }
 
 interface PendingImport {
@@ -64,7 +66,7 @@ function currentChapterTitle(book: Book): string | null {
   return chapter.title
 }
 
-export function Library({ books, onBooksChange, onOpenBook, onShowAbout }: Props) {
+export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, onToggleTheme }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedIdx, setSelectedIdx] = useState(0)
@@ -359,6 +361,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout }: Props
 
       <footer className="library-footer">
         <button className="btn-icon" onClick={() => setShowLibHelp(true)} title="Keyboard shortcuts (/)">?</button>
+        <button className="btn-icon" onClick={onToggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (D)`}>{theme === 'dark' ? '☀' : '☾'}</button>
         <button className="btn-icon" onClick={onShowAbout} title="About (I)">ℹ</button>
       </footer>
 
@@ -374,6 +377,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout }: Props
               <span className="help-key">⌘⌫</span>       <span className="help-desc">Remove book</span>
               <span className="help-key">⌘K</span>        <span className="help-desc">Search books</span>
               <span className="help-key">/</span>          <span className="help-desc">Keyboard shortcuts</span>
+              <span className="help-key">D</span>          <span className="help-desc">Toggle dark / light mode</span>
               <span className="help-key">I</span>          <span className="help-desc">About</span>
             </div>
           </div>

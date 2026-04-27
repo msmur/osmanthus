@@ -14,6 +14,8 @@ interface Props {
   onProgressUpdate: (bookId: string, wordIndex: number, totalWords: number) => void
   onComplete: (bookId: string) => void
   onShowAbout: () => void
+  theme: 'light' | 'dark'
+  onToggleTheme: () => void
 }
 
 const CONTEXT_BEFORE = 3
@@ -45,7 +47,7 @@ function getParagraphsAroundIndex(words: string[], breaks: Set<number>, currentI
   return { prev2, prev1, currentWords, currentHighlight }
 }
 
-export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout }: Props) {
+export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout, theme, onToggleTheme }: Props) {
   const [words, setWords] = useState<string[]>([])
   const [toc, setToc] = useState<TocEntry[]>([])
   const [idx, setIdx] = useState(book.wordIndex)
@@ -773,6 +775,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           <button className={`btn-icon${showHeader ? ' btn-icon-active' : ''}`} onClick={() => setShowHeader(s => !s)} title="Toggle navbar (N)">⊤</button>
           <button className={`btn-icon${showControls ? ' btn-icon-active' : ''}`} onClick={() => setShowControls(s => !s)} title="Toggle controls (X)">⊥</button>
           <button className="btn-icon" onClick={() => setShowHelp(true)} title="Keyboard shortcuts (/)">?</button>
+          <button className="btn-icon" onClick={onToggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (D)`}>{theme === 'dark' ? '☀' : '☾'}</button>
           <button className="btn-icon" onClick={onShowAbout} title="About (I)">ℹ</button>
           <button className={`btn-icon${showToc ? ' btn-icon-active' : ''}`} onClick={() => setShowToc(s => !s)} title="Table of contents (T)">☰</button>
           <button className={`btn-icon${showTimeline ? ' btn-icon-active' : ''}`} onClick={() => setShowTimeline(s => !s)} title="Undo history (H)">⊙</button>
@@ -824,6 +827,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
               <span className="help-key">R</span>            <span className="help-desc">Toggle ramp-up (WPM &gt; 500 only)</span>
               <span className="help-key">H</span>            <span className="help-desc">Toggle undo history</span>
               <span className="help-key">⌘Z</span>          <span className="help-desc">Undo word index change</span>
+              <span className="help-key">D</span>            <span className="help-desc">Toggle dark / light mode</span>
               <span className="help-key">L</span>            <span className="help-desc">Go to library</span>
               <span className="help-key">Esc</span>          <span className="help-desc">Exit fullscreen</span>
               <span className="help-key">/</span>            <span className="help-desc">This help</span>
