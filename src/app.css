@@ -388,6 +388,17 @@ input[type='range'] {
 .btn-icon:hover { background: var(--bg-hover); color: var(--text); }
 .btn-icon-active { background: var(--bg-hover); color: var(--text); }
 
+.btn-dedup {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-2);
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.btn-dedup:hover { background: var(--bg-hover); color: var(--text); }
+
 .reader-loading, .reader-error {
   display: flex;
   flex-direction: column;

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import type { Book } from '../types'
+import type { Book, Settings } from '../types'
 import { parseEpub } from '../lib/epub'
-import { upsertBook, removeBook, cacheWords, cacheToc, cacheParagraphBreaks } from '../lib/store'
+import { upsertBook, removeBook, cacheWords, cacheToc, cacheParagraphBreaks, getSettings, saveSettings } from '../lib/store'
 
 interface Props {
   books: Book[]
@@ -17,6 +17,7 @@ interface PendingImport {
   incoming: Book
   words: string[]
   paragraphBreaks: number[]
+  matchType: 'sha' | 'title'
 }
 
 const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
@@ -35,8 +36,14 @@ function formatDate(ts: number): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
+async function sha256(buffer: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', buffer)
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 async function importBook(filePath: string, buffer: ArrayBuffer) {
-  const { title, author, coverDataUrl, words, toc, paragraphBreaks } = await parseEpub(buffer)
+  const [{ title, author, coverDataUrl, words, toc, paragraphBreaks }, sha] =
+    await Promise.all([parseEpub(buffer), sha256(buffer)])
   const book: Book = {
     id: nanoid(),
     title,
@@ -47,6 +54,7 @@ async function importBook(filePath: string, buffer: ArrayBuffer) {
     totalWords: words.length,
     addedAt: Date.now(),
     toc,
+    sha,
   }
   return { book, words, paragraphBreaks }
 }
@@ -72,6 +80,8 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [pendingImport, setPendingImport] = useState<PendingImport | null>(null)
   const [showLibHelp, setShowLibHelp] = useState(false)
+  const [dupDetection, setDupDetection] = useState<Settings['dupDetection']>('title')
+  const dupDetectionRef = useRef<Settings['dupDetection']>('title')
   const fileInputRef = useRef<HTMLInputElement>(null)
   const selectedIdxRef = useRef(0)
   const sortedRef = useRef<Book[]>([])
@@ -79,6 +89,26 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
   const showLibHelpRef = useRef(false)
   booksRef.current = books
   showLibHelpRef.current = showLibHelp
+  dupDetectionRef.current = dupDetection
+
+  useEffect(() => {
+    getSettings().then(s => {
+      const v = s.dupDetection ?? 'both'
+      setDupDetection(v)
+      dupDetectionRef.current = v
+    })
+  }, [])
+
+  const saveDupDetection = useCallback(async (value: Settings['dupDetection']) => {
+    setDupDetection(value)
+    dupDetectionRef.current = value
+    const s = await getSettings()
+    await saveSettings({ ...s, dupDetection: value })
+  }, [])
+
+  const cycleDupDetection = useCallback(() => {
+    saveDupDetection(dupDetectionRef.current === 'title' ? 'sha' : 'title')
+  }, [saveDupDetection])
 
   const saveBook = useCallback(async (
     book: Book, words: string[], paragraphBreaks: number[],
@@ -87,10 +117,18 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
     onBooksChange(await upsertBook(book))
   }, [onBooksChange])
 
-  const checkDuplicate = useCallback((incoming: Book) => {
-    return booksRef.current.find(
-      b => b.title.toLowerCase() === incoming.title.toLowerCase(),
-    ) ?? null
+  const checkDuplicate = useCallback((incoming: Book): { existing: Book; matchType: 'sha' | 'title' } | null => {
+    const mode = dupDetectionRef.current ?? 'sha'
+    if (mode === 'sha' && incoming.sha) {
+      const shaMatch = booksRef.current.find(b => b.sha && b.sha === incoming.sha)
+      if (shaMatch) return { existing: shaMatch, matchType: 'sha' }
+    } else if (mode === 'title') {
+      const titleMatch = booksRef.current.find(
+        b => b.title.toLowerCase() === incoming.title.toLowerCase(),
+      )
+      if (titleMatch) return { existing: titleMatch, matchType: 'title' }
+    }
+    return null
   }, [])
 
   const handleAdd = useCallback(async () => {
@@ -115,9 +153,9 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
       const buffer = bytes.buffer as ArrayBuffer
 
       const { book, words, paragraphBreaks } = await importBook(filePath, buffer)
-      const existing = checkDuplicate(book)
-      if (existing) {
-        setPendingImport({ existing, incoming: book, words, paragraphBreaks })
+      const dup = checkDuplicate(book)
+      if (dup) {
+        setPendingImport({ existing: dup.existing, incoming: book, words, paragraphBreaks, matchType: dup.matchType })
       } else {
         await saveBook(book, words, paragraphBreaks)
       }
@@ -135,9 +173,9 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
     try {
       const buffer = await file.arrayBuffer()
       const { book, words, paragraphBreaks } = await importBook(file.name, buffer)
-      const existing = checkDuplicate(book)
-      if (existing) {
-        setPendingImport({ existing, incoming: book, words, paragraphBreaks })
+      const dup = checkDuplicate(book)
+      if (dup) {
+        setPendingImport({ existing: dup.existing, incoming: book, words, paragraphBreaks, matchType: dup.matchType })
       } else {
         await saveBook(book, words, paragraphBreaks)
       }
@@ -160,6 +198,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
       coverDataUrl: incoming.coverDataUrl,
       totalWords: incoming.totalWords,
       toc: incoming.toc,
+      sha: incoming.sha,
     }
     applyCache(existing.id, words, updated.toc, paragraphBreaks)
     onBooksChange(await upsertBook(updated))
@@ -226,6 +265,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
       const len = sortedRef.current.length
       if (e.key === '/') { e.preventDefault(); setShowLibHelp(true); return }
       if (e.code === 'KeyN') { handleAdd(); return }
+      if (e.code === 'KeyM') { cycleDupDetection(); return }
       if ((e.metaKey || e.ctrlKey) && e.code === 'Backspace') {
         e.preventDefault()
         handleRemoveSelected()
@@ -245,7 +285,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onOpenBook, handleAdd, handleRemoveSelected])
+  }, [onOpenBook, handleAdd, handleRemoveSelected, cycleDupDetection])
 
   useEffect(() => {
     document.querySelector<HTMLElement>('.book-card-selected')?.scrollIntoView({ block: 'nearest' })
@@ -360,9 +400,16 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
       )}
 
       <footer className="library-footer">
-        <button className="btn-icon" onClick={() => setShowLibHelp(true)} title="Keyboard shortcuts (/)">?</button>
+        <button className="btn-icon" onClick={() => setShowLibHelp(true)} title="Library shortcuts (/)">?</button>
         <button className="btn-icon" onClick={onToggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (D)`}>{theme === 'dark' ? '☀' : '☾'}</button>
         <button className="btn-icon" onClick={onShowAbout} title="About (I)">ℹ</button>
+        <button
+          className="btn-dedup"
+          onClick={cycleDupDetection}
+          title="Duplicate detection: toggle between title and SHA (M)"
+        >
+          Dedup: {dupDetection}
+        </button>
       </footer>
 
       {showLibHelp && (
@@ -376,7 +423,8 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
               <span className="help-key">↵</span>         <span className="help-desc">Open book</span>
               <span className="help-key">⌘⌫</span>       <span className="help-desc">Remove book</span>
               <span className="help-key">⌘K</span>        <span className="help-desc">Search books</span>
-              <span className="help-key">/</span>          <span className="help-desc">Keyboard shortcuts</span>
+              <span className="help-key">/</span>          <span className="help-desc">Library shortcuts</span>
+              <span className="help-key">M</span>          <span className="help-desc">Toggle duplicate detection (title / sha)</span>
               <span className="help-key">D</span>          <span className="help-desc">Toggle dark / light mode</span>
               <span className="help-key">I</span>          <span className="help-desc">About</span>
             </div>
@@ -387,8 +435,16 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
       {pendingImport && (
         <div className="dup-overlay" onClick={() => setPendingImport(null)}>
           <div className="dup-card" onClick={e => e.stopPropagation()}>
-            <p className="dup-title">"{pendingImport.incoming.title}" already exists</p>
-            <p className="dup-sub">How would you like to handle this?</p>
+            <p className="dup-title">
+              {pendingImport.matchType === 'sha'
+                ? 'This exact file is already in your library'
+                : `"${pendingImport.incoming.title}" already exists`}
+            </p>
+            <p className="dup-sub">
+              {pendingImport.matchType === 'sha'
+                ? 'Identical file content detected. Update the stored path, or add a second copy.'
+                : 'A book with this title already exists — it may be a different edition or file. How would you like to handle this?'}
+            </p>
             <div className="dup-actions">
               <button className="dup-btn" onClick={handleReplacePathOnly}>
                 <span className="dup-btn-label">Update file path</span>

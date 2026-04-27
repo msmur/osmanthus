@@ -468,7 +468,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
     if (wasPlayingRef.current) setPlaying(true)
   }
 
-  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  // ── Reader shortcuts ─────────────────────────────────────────────────────
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (showHelpRef.current) { setShowHelp(false); return }
@@ -848,7 +848,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           <button className={`btn-icon${showParagraphPopup ? ' btn-icon-active' : ''}`} onClick={toggleParagraphPopup} title="Paragraph view (P)">¶</button>
           <button className={`btn-icon${showHeader ? ' btn-icon-active' : ''}`} onClick={() => setShowHeader(s => !s)} title="Toggle navbar (N)">⊤</button>
           <button className={`btn-icon${showControls ? ' btn-icon-active' : ''}`} onClick={() => setShowControls(s => !s)} title="Toggle controls (X)">⊥</button>
-          <button className="btn-icon" onClick={() => setShowHelp(true)} title="Keyboard shortcuts (/)">?</button>
+          <button className="btn-icon" onClick={() => setShowHelp(true)} title="Reader shortcuts (/)">?</button>
           <button className="btn-icon" onClick={onToggleTheme} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode (D)`}>{theme === 'dark' ? '☀' : '☾'}</button>
           <button className="btn-icon" onClick={onShowAbout} title="About (I)">ℹ</button>
           <button className={`btn-icon${showToc ? ' btn-icon-active' : ''}`} onClick={() => setShowToc(s => !s)} title="Headers (H)">☰</button>
@@ -941,7 +941,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       {showHelp && (
         <div className="help-overlay" onClick={() => setShowHelp(false)}>
           <div className="help-card" onClick={(e) => e.stopPropagation()}>
-            <p className="help-title">Keyboard shortcuts</p>
+            <p className="help-title">Reader shortcuts</p>
             <button className="help-close" onClick={() => setShowHelp(false)}>×</button>
             <div className="help-shortcuts">
               <span className="help-key">Space</span>       <span className="help-desc">Play / Pause</span>

@@ -95,7 +95,7 @@ export async function markCompleted(bookId: string): Promise<void> {
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-const DEFAULT_SETTINGS: Settings = { wpm: 280, fontSize: 1 }
+const DEFAULT_SETTINGS: Settings = { wpm: 280, fontSize: 1, dupDetection: 'title' }
 
 export async function getSettings(): Promise<Settings> {
   const saved = await storeGet<Settings>('settings')
