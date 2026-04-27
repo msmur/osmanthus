@@ -75,19 +75,10 @@ jobs:
         with:
           name: Osmanthus ${{ github.ref_name }}
           body: |
-            ## Osmanthus ${{ github.ref_name }}
-
-            ### Download
-            | Platform | File |
-            |---|---|
-            | macOS Apple Silicon | `*_arm64.dmg` |
-
-            > **First launch:** The app is unsigned. macOS will block it with a "damaged" error.
-            > Run this in Terminal after moving the app to Applications:
-            > ```
-            > xattr -cr /Applications/Osmanthus.app
-            > ```
-            > Then open it normally.
+            # Download
+            | Platform | File | Notes |
+            |---|---|---|
+            | macOS Apple Silicon | `*_arm64.dmg` | If macOS says "damaged", run `xattr -cr /Applications/Osmanthus.app` in Terminal after installing |
 
             See [SETUP.md](https://github.com/${{ github.repository }}/blob/main/SETUP.md) to build from source.
           draft: false
