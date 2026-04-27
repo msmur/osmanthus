@@ -9,18 +9,10 @@ permissions:
   contents: write
 
 jobs:
-  # ── Build macOS binaries in parallel ──────────────────────────────────────
+  # ── Build Apple Silicon binary ────────────────────────────────────────────
   build:
-    name: Build (${{ matrix.target }})
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: aarch64-apple-darwin
-            runner: macos-14        # M1 runner — builds native ARM binary
-          - target: x86_64-apple-darwin
-            runner: macos-13        # Intel runner — builds native x86 binary
+    name: Build (aarch64-apple-darwin)
+    runs-on: macos-14
 
     steps:
       - name: Checkout
@@ -29,7 +21,7 @@ jobs:
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -50,17 +42,16 @@ jobs:
           workspaces: src-tauri
 
       - name: Build Tauri app
-        run: pnpm tauri build --target ${{ matrix.target }}
+        run: pnpm tauri build --target aarch64-apple-darwin
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dmg-${{ matrix.target }}
-          # Tauri bundles the .dmg into this path
-          path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+          name: dmg-aarch64-apple-darwin
+          path: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
           if-no-files-found: error
 
-  # ── Create GitHub Release and attach both DMGs ────────────────────────────
+  # ── Create GitHub Release and attach DMG ──────────────────────────────────
   release:
     name: Create Release
     needs: build
@@ -73,19 +64,10 @@ jobs:
           name: dmg-aarch64-apple-darwin
           path: artifacts/arm
 
-      - name: Download Intel artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dmg-x86_64-apple-darwin
-          path: artifacts/intel
-
-      - name: Rename DMGs to include architecture
+      - name: Rename DMG to include architecture
         run: |
           for f in artifacts/arm/*.dmg; do
             mv "$f" "${f%.dmg}_arm64.dmg"
-          done
-          for f in artifacts/intel/*.dmg; do
-            mv "$f" "${f%.dmg}_x86_64.dmg"
           done
 
       - name: Create GitHub Release
@@ -98,8 +80,7 @@ jobs:
             ### Download
             | Platform | File |
             |---|---|
-            | macOS Apple Silicon (M1 Series) | `*_arm64.dmg` |
-            | macOS Intel | `*_x86_64.dmg` |
+            | macOS Apple Silicon | `*_arm64.dmg` |
 
             > **First launch:** The app is unsigned. Right-click → **Open** to bypass Gatekeeper.
 
@@ -108,4 +89,3 @@ jobs:
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             artifacts/arm/*.dmg
-            artifacts/intel/*.dmg

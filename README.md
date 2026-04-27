@@ -42,7 +42,7 @@ Grab the latest `.dmg` from [**Releases**](https://github.com/msmur/osmanthus/re
 
 > **macOS note:** Osmanthus is unsigned. On first launch, right-click the app → **Open** to bypass Gatekeeper.
 >
-> Two builds are available: `aarch64` (Apple Silicon) and `x86_64` (Intel).
+> Apple Silicon only (M1/M2/etc). Intel Macs can build from source.
 
 ---
 
