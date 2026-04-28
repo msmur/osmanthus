@@ -7,7 +7,7 @@
 
 ![Osmanthus](docs/assets/osmanthus_marketing.png)
 
-![Demo of Osmanthus](docs/assets/demo.mp4)
+![Demo of Osmanthus](https://github.com/user-attachments/assets/4c1aa459-8ea3-4a92-a055-6831227c0a96)
 
 ---
 
