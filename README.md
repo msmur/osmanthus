@@ -7,8 +7,6 @@
 
 ![Osmanthus](docs/assets/osmanthus_marketing.png)
 
-https://github.com/user-attachments/assets/4c1aa459-8ea3-4a92-a055-6831227c0a96
-
 ---
 
 ## What is RSVP?
