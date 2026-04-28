@@ -1,6 +1,6 @@
 [package]
 name = "osmanthus"
-version = "0.1.0"
+version = "0.2.0"
 description = "RSVP speed reader for epub files"
 authors = []
 edition = "2021"
