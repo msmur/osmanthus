@@ -93,7 +93,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
 
   useEffect(() => {
     getSettings().then(s => {
-      const v = s.dupDetection ?? 'both'
+      const v = s.dupDetection ?? 'title'
       setDupDetection(v)
       dupDetectionRef.current = v
     })
