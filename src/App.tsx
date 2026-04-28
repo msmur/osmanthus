@@ -241,7 +241,7 @@ export default function App() {
             <p className="about-tagline">RSVP speed-reader for epub files</p>
             <div className="about-author">
               <span className="about-author-label">Made by</span>
-              <span className="about-author-name">Maahir Ur Rahman Mohamed Shibly</span>
+              <span className="about-author-name">Maahir</span>
             </div>
             <div className="about-links">
               <button className="about-link" onClick={() => openExternal('https://github.com/msmur/osmanthus')}>

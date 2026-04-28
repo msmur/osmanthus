@@ -89,7 +89,7 @@ nav {
 /* ── Hero ──────────────────────────────────────────────────────────────────── */
 .hero {
   text-align: center;
-  padding: 96px 24px 64px;
+  padding: 24px 24px 64px;
 }
 .hero-tag {
   display: inline-block;
@@ -146,7 +146,7 @@ nav {
 
 /* ── Screenshot ────────────────────────────────────────────────────────────── */
 .screenshot-section {
-  padding: 0 24px 80px;
+  padding: 0 24px 40px;
 }
 .screenshot-wrap {
   max-width: var(--max);
