@@ -25,10 +25,14 @@ sed -i '' "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" "$ROOT/src-taur
 # src-tauri/Cargo.toml  (first occurrence only — the [package] block)
 sed -i '' "1,/^version = /s/^version = \"[^\"]*\"/version = \"$VERSION\"/" "$ROOT/src-tauri/Cargo.toml"
 
+# Cargo.lock — regenerate to reflect new version without upgrading deps
+(cd "$ROOT/src-tauri" && cargo update --workspace)
+
 echo "Bumped to $VERSION in:"
 echo "  package.json"
 echo "  src-tauri/tauri.conf.json"
 echo "  src-tauri/Cargo.toml"
+echo "  src-tauri/Cargo.lock"
 echo ""
 echo "Next steps:"
 echo "  git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock"

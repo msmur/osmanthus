@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Book, Settings } from '../types'
 import { parseEpub } from '../lib/epub'
-import { upsertBook, removeBook, cacheWords, cacheToc, cacheParagraphBreaks, getSettings, saveSettings } from '../lib/store'
+import { upsertBook, removeBook, applyCache, getSettings, saveSettings } from '../lib/store'
+import { sha256, isTauri, getChapterAt } from '../lib/utils'
 
 interface Props {
   books: Book[]
@@ -20,8 +21,6 @@ interface PendingImport {
   matchType: 'sha' | 'title'
 }
 
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
-
 function nanoid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36)
 }
@@ -34,11 +33,6 @@ function formatProgress(book: Book): string {
 function formatDate(ts: number): string {
   const d = new Date(ts)
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-}
-
-async function sha256(buffer: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', buffer)
-  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
 async function importBook(filePath: string, buffer: ArrayBuffer) {
@@ -57,21 +51,6 @@ async function importBook(filePath: string, buffer: ArrayBuffer) {
     sha,
   }
   return { book, words, paragraphBreaks }
-}
-
-function applyCache(id: string, words: string[], toc: Book['toc'], breaks: number[]) {
-  cacheWords(id, words)
-  cacheToc(id, toc ?? [])
-  cacheParagraphBreaks(id, breaks)
-}
-
-function currentChapterTitle(book: Book): string | null {
-  if (!book.toc || book.toc.length === 0) return null
-  let chapter = book.toc[0]
-  for (const entry of book.toc) {
-    if (entry.wordIndex <= book.wordIndex) chapter = entry
-  }
-  return chapter.title
 }
 
 export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, onToggleTheme }: Props) {
@@ -160,7 +139,6 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
         await saveBook(book, words, paragraphBreaks)
       }
     } catch (err) {
-      console.error('[Library] handleAdd failed:', err)
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
@@ -350,6 +328,7 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
               ? (book.wordIndex / book.totalWords) * 100
               : 0
             const status = book.completedAt ? 'finished' : book.wordIndex > 0 ? 'reading' : 'unread'
+            const chapterTitle = getChapterAt(book.toc ?? [], book.wordIndex)
             return (
               <div key={book.id} className={`book-card${i === selectedIdx ? ' book-card-selected' : ''}`} onClick={() => onOpenBook(book)}>
                 <button
@@ -376,8 +355,8 @@ export function Library({ books, onBooksChange, onOpenBook, onShowAbout, theme, 
                   <span className={`book-status-badge status-${status}`}>
                     {status === 'finished' ? 'Finished' : status === 'reading' ? 'Reading' : 'Unread'}
                   </span>
-                  {currentChapterTitle(book) && (
-                    <p className="book-chapter" title={currentChapterTitle(book) ?? ''}>{currentChapterTitle(book)}</p>
+                  {chapterTitle && (
+                    <p className="book-chapter" title={chapterTitle}>{chapterTitle}</p>
                   )}
                   <div className="book-progress-bar">
                     <div className="book-progress-fill" style={{ width: `${pct}%` }} />

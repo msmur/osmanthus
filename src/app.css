@@ -414,6 +414,45 @@ input[type='range'] {
   text-decoration: underline;
   color: var(--text-2);
 }
+.reader-error-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.reader-error-path {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-3);
+  max-width: 480px;
+  word-break: break-all;
+  text-align: center;
+}
+.reader-error-warning {
+  font-size: 13px;
+  color: var(--accent);
+}
+.reader-error-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 4px;
+}
+.reader-error-btn-primary {
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 0.5px solid var(--border-strong);
+  text-decoration: none;
+}
+.reader-error-btn-primary:disabled { opacity: 0.5; }
+.reader-error-btn-secondary {
+  font-size: 14px;
+  text-decoration: underline;
+  color: var(--text-2);
+}
 
 .reader-header {
   position: relative;

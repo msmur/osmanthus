@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Book, View } from './types'
-import { getBooks, updateProgress, markCompleted, initAppVersion } from './lib/store'
+import { getBooks, updateProgress, markCompleted, initAppVersion, upsertBook } from './lib/store'
+import { isTauri } from './lib/utils'
 import { Library } from './views/Library'
 import { Reader } from './views/Reader'
 
@@ -36,7 +37,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if ('__TAURI_INTERNALS__' in window) {
+    if (isTauri) {
       import('@tauri-apps/api/app').then(({ getVersion }) =>
         getVersion().then(v => { setAppVersion(v); initAppVersion(v) })
       )
@@ -44,7 +45,7 @@ export default function App() {
   }, [])
 
   function openExternal(url: string) {
-    if ('__TAURI_INTERNALS__' in window) {
+    if (isTauri) {
       import('@tauri-apps/plugin-opener').then(({ openUrl }) => openUrl(url))
     } else {
       window.open(url, '_blank', 'noopener,noreferrer')
@@ -73,6 +74,15 @@ export default function App() {
     updateProgress(bookId, wordIndex)
   }, [])
 
+  const handleRelocate = useCallback((bookId: string, newFilePath: string, newSha: string) => {
+    setBooks((prev) => {
+      const updated = prev.map((b) => b.id === bookId ? { ...b, filePath: newFilePath, sha: newSha } : b)
+      const book = updated.find((b) => b.id === bookId)
+      if (book) upsertBook(book)
+      return updated
+    })
+  }, [])
+
   const handleComplete = useCallback((bookId: string) => {
     setBooks((prev) =>
       prev.map((b) => b.id === bookId ? { ...b, completedAt: Date.now() } : b),
@@ -93,7 +103,7 @@ export default function App() {
       }
       if (e.target instanceof HTMLInputElement) return
       if (e.code === 'KeyF' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
-        if ('__TAURI_INTERNALS__' in window) {
+        if (isTauri) {
           import('@tauri-apps/api/window').then(({ getCurrentWindow }) => {
             const win = getCurrentWindow()
             win.isFullscreen().then((fs) => win.setFullscreen(!fs))
@@ -162,6 +172,7 @@ export default function App() {
         onBack={handleBack}
         onProgressUpdate={handleProgressUpdate}
         onComplete={handleComplete}
+        onRelocate={handleRelocate}
         onShowAbout={() => setShowAbout(true)}
         theme={theme}
         onToggleTheme={toggleTheme}

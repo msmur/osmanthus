@@ -3,10 +3,10 @@ import type { Book, TocEntry } from '../types'
 import { splitAtOrp, wordDelay } from '../lib/rsvp'
 import { parseEpub } from '../lib/epub'
 import {
-  getCachedWords, cacheWords, getCachedToc, cacheToc,
-  getCachedParagraphBreaks, cacheParagraphBreaks,
-  updateProgress, getSettings, saveSettings,
+  getCachedWords, getCachedToc, getCachedParagraphBreaks,
+  applyCache, updateProgress, getSettings, saveSettings,
 } from '../lib/store'
+import { sha256, isTauri, getChapterAt } from '../lib/utils'
 
 interface Props {
   book: Book
@@ -14,6 +14,7 @@ interface Props {
   onProgressUpdate: (bookId: string, wordIndex: number, totalWords: number) => void
   onComplete: (bookId: string) => void
   onShowAbout: () => void
+  onRelocate: (bookId: string, newFilePath: string, newSha: string) => void
   theme: 'light' | 'dark'
   onToggleTheme: () => void
 }
@@ -47,7 +48,7 @@ function getParagraphsAroundIndex(words: string[], breaks: Set<number>, currentI
   return { prev2, prev1, currentWords, currentHighlight }
 }
 
-export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout, theme, onToggleTheme }: Props) {
+export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout, onRelocate, theme, onToggleTheme }: Props) {
   const [words, setWords] = useState<string[]>([])
   const [toc, setToc] = useState<TocEntry[]>([])
   const [idx, setIdx] = useState(book.wordIndex)
@@ -60,6 +61,9 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
   const [posHistory, setPosHistory] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [fileNotFound, setFileNotFound] = useState(false)
+  const [relocating, setRelocating] = useState(false)
+  const [relocateWarning, setRelocateWarning] = useState(false)
   const [flashedKey, setFlashedKey] = useState<string | null>(null)
   const [jumpInput, setJumpInput] = useState('')
   const [zenMode, setZenMode] = useState(false)
@@ -183,14 +187,12 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
       }
       setLoading(true)
       try {
-        if ('__TAURI_INTERNALS__' in window) {
+        if (isTauri) {
           const { readFile } = await import('@tauri-apps/plugin-fs')
           const bytes = await readFile(book.filePath)
           const buffer = bytes.buffer as ArrayBuffer
           const { words: parsed, toc: parsedToc, paragraphBreaks: parsedBreaks } = await parseEpub(buffer)
-          cacheWords(book.id, parsed)
-          cacheToc(book.id, parsedToc)
-          cacheParagraphBreaks(book.id, parsedBreaks)
+          applyCache(book.id, parsed, parsedToc, parsedBreaks)
           setWords(parsed)
           setToc(parsedToc)
           setParagraphBreaks(new Set(parsedBreaks))
@@ -199,11 +201,14 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           setError('Words not cached. Please re-open the book from the library.')
         }
       } catch (e) {
-        setError(
-          e instanceof Error
-            ? `Could not load "${book.filePath}": ${e.message}`
-            : 'Failed to load book.',
-        )
+        const msg = e instanceof Error ? e.message : typeof e === 'string' ? e : String(e)
+        const notFound = /os error 2|no such file|not found|does not exist/i.test(msg)
+        if (notFound) {
+          setFileNotFound(true)
+          setError('file_not_found')
+        } else {
+          setError(msg || 'Failed to load book.')
+        }
       } finally {
         setLoading(false)
       }
@@ -538,7 +543,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
         if (showTimerPromptRef.current) { closeTimerPrompt(); return }
         if (isFullscreenRef.current) {
           isFullscreenRef.current = false
-          if ('__TAURI_INTERNALS__' in window) {
+          if (isTauri) {
             import('@tauri-apps/api/window').then(({ getCurrentWindow }) =>
               getCurrentWindow().setFullscreen(false)
             )
@@ -605,14 +610,6 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
     if (toc[i].wordIndex <= idx) currentChapterIdx = i
   }
 
-  function chapterAt(wordIdx: number) {
-    let title = ''
-    for (const entry of toc) {
-      if (entry.wordIndex <= wordIdx) title = entry.title
-    }
-    return title
-  }
-
   // Timeline entries: current position first, then undo history newest → oldest
   const timelineEntries = showTimeline
     ? [
@@ -620,6 +617,47 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
         ...[...posHistory].reverse().map((wordIdx) => ({ wordIdx, isCurrent: false })),
       ]
     : []
+
+  // ── Relocate handler ──────────────────────────────────────────────────────
+  async function handleRelocate() {
+    setRelocating(true)
+    setRelocateWarning(false)
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      const selected = await open({ multiple: false, filters: [{ name: 'Epub', extensions: ['epub'] }] })
+      if (!selected) return
+      const filePath = typeof selected === 'string' ? selected : selected[0]
+      if (!filePath) return
+
+      const { readFile } = await import('@tauri-apps/plugin-fs')
+      const bytes = await readFile(filePath)
+      const buffer = bytes.buffer as ArrayBuffer
+
+      const newSha = await sha256(buffer)
+      const shaMatch = !!book.sha && newSha === book.sha
+
+      const { words: parsed, toc: parsedToc, paragraphBreaks: parsedBreaks, title } = await parseEpub(buffer)
+      const titleMatch = title.toLowerCase() === book.title.toLowerCase()
+
+      if (shaMatch || titleMatch) {
+        onRelocate(book.id, filePath, newSha)
+        applyCache(book.id, parsed, parsedToc, parsedBreaks)
+        setWords(parsed)
+        setToc(parsedToc)
+        setParagraphBreaks(new Set(parsedBreaks))
+        setIdx(book.wordIndex)
+        setFileNotFound(false)
+        setError(null)
+      } else {
+        setRelocateWarning(true)
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to open file.')
+      setFileNotFound(false)
+    } finally {
+      setRelocating(false)
+    }
+  }
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -629,8 +667,26 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
   if (error) {
     return (
       <div className="reader-error">
-        <p>{error}</p>
-        <button onClick={onBack}>← Back to library</button>
+        {fileNotFound ? (
+          <>
+            <p className="reader-error-title">File not found</p>
+            <p className="reader-error-path">{book.filePath}</p>
+            {relocateWarning && (
+              <p className="reader-error-warning">That doesn't look like "{book.title}" — please try again.</p>
+            )}
+            <div className="reader-error-actions">
+              <button className="reader-error-btn-primary" onClick={handleRelocate} disabled={relocating}>
+                {relocating ? 'Checking…' : 'Locate file…'}
+              </button>
+              <button className="reader-error-btn-secondary" onClick={onBack}>← Back to library</button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p>{error}</p>
+            <button onClick={onBack}>← Back to library</button>
+          </>
+        )}
       </div>
     )
   }
@@ -773,7 +829,7 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
               ) : (
                 timelineEntries.map((entry, i) => {
                   const entryPct = words.length > 0 ? Math.round((entry.wordIdx / words.length) * 100) : 0
-                  const chapter = chapterAt(entry.wordIdx)
+                  const chapter = getChapterAt(toc, entry.wordIdx)
                   return (
                     <div key={i} className={`timeline-row${entry.isCurrent ? ' timeline-row-current' : ''}`}>
                       <span className="timeline-badge">{entry.isCurrent ? 'now' : `↩ ${i}`}</span>

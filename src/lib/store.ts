@@ -7,6 +7,7 @@
  */
 
 import type { Book, Settings, TocEntry } from '../types'
+import { isTauri } from './utils'
 
 // ─── Tauri Store wrapper ─────────────────────────────────────────────────────
 
@@ -22,8 +23,6 @@ async function getStore() {
   }
   return _storePromise
 }
-
-const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window
 
 // ─── Generic get/set ─────────────────────────────────────────────────────────
 
@@ -144,4 +143,10 @@ export function cacheParagraphBreaks(bookId: string, breaks: number[]): void {
 
 export function getCachedParagraphBreaks(bookId: string): Set<number> | null {
   return paragraphBreakCache.get(bookId) ?? null
+}
+
+export function applyCache(bookId: string, words: string[], toc: TocEntry[] | undefined, breaks: number[]): void {
+  cacheWords(bookId, words)
+  cacheToc(bookId, toc ?? [])
+  cacheParagraphBreaks(bookId, breaks)
 }
