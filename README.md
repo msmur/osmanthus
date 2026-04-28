@@ -40,12 +40,12 @@ Osmanthus also uses the **Optimal Recognition Point (ORP)**: the letter ~30% int
 
 <table>
   <tr>
+    <td align="center"><img src="docs/assets/ss_library_empty.png" alt="Empty library" /><br><sub>Empty library</sub></td>
     <td align="center"><img src="docs/assets/ss_library_book.png" alt="Library" /><br><sub>Library</sub></td>
-    <td align="center"><img src="docs/assets/ss_reader_default.png" alt="Reader" /><br><sub>Reader</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="docs/assets/ss_reader_default.png" alt="Reader" /><br><sub>Reader</sub></td>
     <td align="center"><img src="docs/assets/ss_reader_zen.png" alt="Zen mode" /><br><sub>Zen mode</sub></td>
-    <td align="center"><img src="docs/assets/ss_library_empty.png" alt="Empty library" /><br><sub>Empty library</sub></td>
   </tr>
   <tr>
     <td align="center"><img src="docs/assets/ss_library_shortcuts.png" alt="Library shortcuts" /><br><sub>Library shortcuts</sub></td>
