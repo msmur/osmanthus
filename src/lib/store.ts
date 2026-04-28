@@ -106,6 +106,15 @@ export async function saveSettings(settings: Settings): Promise<void> {
   await storeSet('settings', settings)
 }
 
+// ─── App version ─────────────────────────────────────────────────────────────
+// Written on every launch so the stored file always reflects the version that
+// last touched it — useful for future migrations.
+
+export async function initAppVersion(version: string): Promise<void> {
+  const existing = await storeGet<string>('version')
+  if (!existing) await storeSet('version', version)
+}
+
 // ─── In-memory caches (per session) ──────────────────────────────────────────
 // Words and TOC are re-parsed from the epub each session; only word position is persisted.
 

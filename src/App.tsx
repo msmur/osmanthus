@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Book, View } from './types'
-import { getBooks, updateProgress, markCompleted } from './lib/store'
+import { getBooks, updateProgress, markCompleted, initAppVersion } from './lib/store'
 import { Library } from './views/Library'
 import { Reader } from './views/Reader'
 
@@ -37,7 +37,9 @@ export default function App() {
 
   useEffect(() => {
     if ('__TAURI_INTERNALS__' in window) {
-      import('@tauri-apps/api/app').then(({ getVersion }) => getVersion().then(setAppVersion))
+      import('@tauri-apps/api/app').then(({ getVersion }) =>
+        getVersion().then(v => { setAppVersion(v); initAppVersion(v) })
+      )
     }
   }, [])
 

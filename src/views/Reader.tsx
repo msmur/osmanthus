@@ -199,7 +199,6 @@ export function Reader({ book, onBack, onProgressUpdate, onComplete, onShowAbout
           setError('Words not cached. Please re-open the book from the library.')
         }
       } catch (e) {
-        console.error('[Reader] load failed:', e)
         setError(
           e instanceof Error
             ? `Could not load "${book.filePath}": ${e.message}`
