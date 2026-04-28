@@ -247,6 +247,93 @@ nav {
   margin-bottom: 10px;
 }
 
+/* ── Screenshots carousel ──────────────────────────────────────────────────── */
+.carousel-section {
+  padding: 72px 24px;
+  background: var(--bg-card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.carousel {
+  position: relative;
+  max-width: var(--max);
+  margin: 0 auto;
+}
+.carousel-viewport {
+  overflow: hidden;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.10);
+}
+.carousel-track {
+  display: flex;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.carousel-slide {
+  min-width: 100%;
+}
+.carousel-slide img {
+  width: 100%;
+  border-radius: 0;
+  display: block;
+}
+.carousel-caption {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-3);
+  padding: 10px 0 4px;
+  background: var(--bg-card);
+}
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(calc(-50% - 18px));
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  z-index: 2;
+}
+.carousel-btn:hover { background: var(--bg-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+.carousel-prev { left: -20px; }
+.carousel-next { right: -20px; }
+@media (max-width: 680px) {
+  .carousel-prev { left: 8px; }
+  .carousel-next { right: 8px; }
+}
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+.carousel-dot.active {
+  background: var(--accent);
+  transform: scale(1.25);
+}
+.carousel-dot:hover { background: var(--text-3); }
+
 /* ── Download ──────────────────────────────────────────────────────────────── */
 .download-section { padding: 80px 24px; text-align: center; }
 .download-section h2 { font-size: 28px; font-weight: 700; margin-bottom: 12px; letter-spacing: -0.02em; }

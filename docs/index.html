@@ -163,6 +163,77 @@
   </div>
 </section>
 
+<!-- ── Screenshots carousel ─────────────────────────────────────────────────── -->
+<section class="carousel-section">
+  <div class="container">
+    <h2 class="section-title">Screenshots</h2>
+    <div class="carousel" role="region" aria-label="Screenshots">
+      <div class="carousel-viewport">
+        <div class="carousel-track" id="carouselTrack">
+          <div class="carousel-slide">
+            <img src="assets/ss_library_book.png" alt="Library with books" />
+            <p class="carousel-caption">Library</p>
+          </div>
+          <div class="carousel-slide">
+            <img src="assets/ss_reader_default.png" alt="Reader" />
+            <p class="carousel-caption">Reader</p>
+          </div>
+          <div class="carousel-slide">
+            <img src="assets/ss_reader_zen.png" alt="Zen mode" />
+            <p class="carousel-caption">Zen mode</p>
+          </div>
+          <div class="carousel-slide">
+            <img src="assets/ss_library_empty.png" alt="Empty library drop zone" />
+            <p class="carousel-caption">Empty library</p>
+          </div>
+          <div class="carousel-slide">
+            <img src="assets/ss_library_shortcuts.png" alt="Library keyboard shortcuts" />
+            <p class="carousel-caption">Library shortcuts</p>
+          </div>
+          <div class="carousel-slide">
+            <img src="assets/ss_reader_shortcuts.png" alt="Reader keyboard shortcuts" />
+            <p class="carousel-caption">Reader shortcuts</p>
+          </div>
+        </div>
+      </div>
+      <button class="carousel-btn carousel-prev" id="carouselPrev" aria-label="Previous">‹</button>
+      <button class="carousel-btn carousel-next" id="carouselNext" aria-label="Next">›</button>
+    </div>
+    <div class="carousel-dots" id="carouselDots">
+      <button class="carousel-dot active" aria-label="Slide 1"></button>
+      <button class="carousel-dot" aria-label="Slide 2"></button>
+      <button class="carousel-dot" aria-label="Slide 3"></button>
+      <button class="carousel-dot" aria-label="Slide 4"></button>
+      <button class="carousel-dot" aria-label="Slide 5"></button>
+      <button class="carousel-dot" aria-label="Slide 6"></button>
+    </div>
+  </div>
+</section>
+
+<script>
+(function () {
+  const track = document.getElementById('carouselTrack');
+  const dots  = document.querySelectorAll('.carousel-dot');
+  const total = dots.length;
+  let cur = 0;
+
+  function go(n) {
+    cur = (n + total) % total;
+    track.style.transform = 'translateX(-' + (cur * 100) + '%)';
+    dots.forEach(function (d, i) { d.classList.toggle('active', i === cur); });
+  }
+
+  document.getElementById('carouselPrev').addEventListener('click', function () { go(cur - 1); });
+  document.getElementById('carouselNext').addEventListener('click', function () { go(cur + 1); });
+  dots.forEach(function (d, i) { d.addEventListener('click', function () { go(i); }); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft')  go(cur - 1);
+    if (e.key === 'ArrowRight') go(cur + 1);
+  });
+})();
+</script>
+
 <!-- ── Footer ────────────────────────────────────────────────────────────────── -->
 <footer>
   <div class="footer-inner">
